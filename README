@@ -1,0 +1,15 @@
+ajak's gentoo scripts
+
+
+
+gpyutils-check-for-stablereqs.sh should be called with an argument of either
+'36-to-37' or '37-to-38' and it will fetch the relevant gpyutils stablereq file.
+
+Its output is csv, with columns "atom,stablereq bug number,available python
+impls". If the script finds no stablereqs, "none" is printing in the second
+column for easy grepability. Currently, Gentoo is on the tail end of updating
+to Python 3.7. If the script's output for the 36-to-37 data is put into a file
+'foo', then we can easily see which packages need stablereqs:
+
+$ grep "none.*3\.7" foo
+app-misc/bar,none,3.6 3.7
