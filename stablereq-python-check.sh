@@ -6,10 +6,10 @@ WD="$(dirname $0)/"
 [[ -f $(which gpy-showimpls) ]] || echo "Needs app-portage/gpyutils"
 
 search_reqs() {
-	# Start with a basic search, grep for "stabili[sz]e" or "stable" in bug
+	# Start with a basic search, grep for "stabili[sz]" or "stable" in bug
 	# title, grab out the bug number
 	bugs=$(bugz --columns 9999 --quiet search "${1}" |
-		grep -iE '(stabili[zs]e|stable)' |
+		grep -iE '(stabili[zs]|stable)' |
 		awk '{print $1}')
 
 	echo ${bugs}
