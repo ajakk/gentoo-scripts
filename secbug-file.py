@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 import subprocess
+import sys
 
 import requests
 
@@ -111,6 +112,11 @@ def resolve_severity(whiteboard):
         return "badvalue"
 
 
+def confirm():
+    i = input("File bug? [yN] ")
+    return 'y' in i.lower()
+
+
 def file_bug_from_data(bugdata):
     params = {
         "product": "Gentoo Security",
@@ -141,17 +147,16 @@ def file_bug_from_data(bugdata):
             desc.append(line)
 
     params["description"] = '\n'.join(desc)
-    params["severity"] = resolve_severity(params["whiteboard"])
-    import pdb
-    pdb.set_trace()
+    if params["whiteboard"]:
+        params["severity"] = resolve_severity(params["whiteboard"])
     bug = gbugs.file_bug(params)
-    print("Filed {}".format(bug.json()['id']))
+    print("Filed https://bugs.gentoo.org/{}".format(bug.json()['id']))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--cves', type=str, nargs='+')
-    parser.add_argument('-p', '--package', type=str)
+    parser.add_argument('-c', '--cves', type=str, required=True, nargs='+')
+    parser.add_argument('-p', '--package', type=str, required=True)
     args = parser.parse_args()
 
     cves = sorted(args.cves)
@@ -161,4 +166,7 @@ if __name__ == "__main__":
     maints = gbugs.atom_maints(atom)
 
     data = edit_data(args.package, cves, cve_data, maints)
+    if not confirm():
+        print("Not filing")
+        sys.exit(0)
     file_bug_from_data(data)
