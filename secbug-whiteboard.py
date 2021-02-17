@@ -40,6 +40,16 @@ if __name__ == '__main__':
 
     bug = bz.getbug(args.bug)
 
+    update = {}
+
+    # Go ahead and create an empty skeleton so we don't have to worry about
+    # doing it on demand. Since it's empty, it shouldn't do anything anyway.
+    update['keywords'] = {}
+    update['keywords']['add'] = []
+    update['keywords']['remove'] = []
+
+    update['flag'] = {}
+
     # Basic sanity checks
     if not is_sec_email(bug.assigned_to):
         print("Not a security bug! Exiting.")
@@ -53,17 +63,30 @@ if __name__ == '__main__':
 
     if any(is_arch(email) for email in bug.cc):
         wb_next.append('stable')
+        if 'CC-ARCHES' not in bug.keywords:
+            update['keywords']['add'].append('CC-ARCHES')
+        if 'STABLEREQ' not in bug.keywords:
+            update['keywords']['add'].append('STABLEREQ')
     elif 'stable?' in bug.whiteboard:
         wb_next.append('stable?')
 
     done_stabling = 'stable' in bug.whiteboard and \
         not any(is_arch(email) for email in bug.cc)
 
+    if done_stabling:
+        #import pdb; pdb.set_trace()
+        update['keywords']['remove'] = ['CC-ARCHES', 'STABLEREQ']
+        update['cf_stabilisation_atoms'] = ''
+        update['flag']['name'] = 'sanity-check'
+        update['flag']['status'] = 'X'
+        update['comment'] = 'Please cleanup'
+
     if 'glsa+' in bug.whiteboard:
         wb_next.append('glsa+')
-    elif bug.severity != 'trivial' and \
-            ('glsa?' in bug.whiteboard or 'ebuild' not in bug.whiteboard):
-        # If the severity isn't trivial, If glsa? was already there 
+    elif (bug.severity != 'trivial' and
+          ('glsa?' in bug.whiteboard or 'ebuild' not in bug.whiteboard)) or \
+         (done_stabling or 'cleanup' in bug.whiteboard):
+        # If the severity isn't trivial, If glsa? was already there
         wb_next.append('glsa?')
     elif 'noglsa' in bug.whiteboard:
         wb_next.append('noglsa')
@@ -77,11 +100,11 @@ if __name__ == '__main__':
         wb_next.append('cve')
 
     # Make sure the format is correct
-    wb = evaluation + ' [' + ' '.join(wb_next) + ']'
+    update['whiteboard'] = evaluation + ' [' + ' '.join(wb_next) + ']'
 
     print("Old whiteboard: " + bug.whiteboard)
-    print("New whiteboard: " + wb)
+    print("New dict: " + str(update))
 
     if args.apply:
-        if 'y' in input("File bug? [yN] "):
-            bz.update_bugs([args.bug], bz.build_update(whiteboard=wb))
+        if 'y' in input("Update? [yN] "):
+            bz.update_bugs([args.bug], update)
