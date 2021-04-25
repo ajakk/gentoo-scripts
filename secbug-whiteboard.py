@@ -48,7 +48,8 @@ if __name__ == '__main__':
     update['keywords']['add'] = []
     update['keywords']['remove'] = []
 
-    update['flag'] = {}
+    update['flags'] = [{}]
+    update['comment'] = {}
 
     # Basic sanity checks
     if not is_sec_email(bug.assigned_to):
@@ -77,9 +78,9 @@ if __name__ == '__main__':
         #import pdb; pdb.set_trace()
         update['keywords']['remove'] = ['CC-ARCHES', 'STABLEREQ']
         update['cf_stabilisation_atoms'] = ''
-        update['flag']['name'] = 'sanity-check'
-        update['flag']['status'] = 'X'
-        update['comment'] = 'Please cleanup'
+        update['flags'][0]['name'] = 'sanity-check'
+        update['flags'][0]['status'] = 'X'
+        update['comment']['body'] = 'Please cleanup'
 
     if 'glsa+' in bug.whiteboard:
         wb_next.append('glsa+')
