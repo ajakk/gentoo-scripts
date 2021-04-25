@@ -10,7 +10,7 @@ from pkgcore.ebuild import atom as atom_mod
 BZ_BUG_API = "https://bugs.gentoo.org/rest/bug"
 
 
-def _get_api_key():
+def get_api_key():
     bugzrc = os.path.expanduser("~/.bugzrc")
     config = ConfigParser()
     config.read(bugzrc)
@@ -32,11 +32,16 @@ def atom_maints(atom) -> list:
     mails = [maint.split(" ")[-1] for maint in strings]
 
     # Return list of plain emails
-    return [mail.replace("<", "").replace(">", "") for mail in mails]
+    mails = [mail.replace("<", "").replace(">", "") for mail in mails]
+
+    if len(mails) > 0:
+        return mails
+    else:
+        return ["maintainer-needed@gentoo.org"]
 
 
 def file_bug(params):
-    params["Bugzilla_api_key"] = _get_api_key()
+    params["Bugzilla_api_key"] = get_api_key()
     params["version"] = "unspecified"
 
     return requests.post(BZ_BUG_API, data=params)
