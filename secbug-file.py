@@ -24,10 +24,10 @@ def decode_col(data, col):
     return list(data[col].values())[0]
 
 
-def maybe_get_ref_url(data):
+def get_ref_urls(data):
     try:
         refs = decode_col(data, 'cve.references.reference_data')
-        return refs[0]['url']
+        return [ref['url'] for ref in refs]
     except KeyError:
         return ""
 
@@ -37,7 +37,15 @@ def generate_cve_description(cve_list):
     for cve_data in [json.loads(data.decode()) for data in cve_list]:
         cve = decode_col(cve_data, 'cve.CVE_data_meta.ID')
         this_desc = decode_col(cve_data, 'value')
-        desc.append("{} ({}):".format(cve, maybe_get_ref_url(cve_data)))
+        refs = get_ref_urls(cve_data)
+
+        if len(refs) > 0:
+            desc.append("{} ({}):".format(cve, refs[0]))
+            if len(refs) > 1:
+                for ref in refs[1:]:
+                    desc.append("# {}".format(ref))
+        else:
+            desc.append("{}:".format(cve))
         desc.append("")
         desc.append(this_desc)
         desc.append("")
@@ -127,7 +135,9 @@ def file_bug_from_data(bugdata):
     for line in bugdata.splitlines():
         # These magic numbers are the strings preceeding each line's data that
         # we don't care about
-        if line.startswith("Summary: "):
+        if line.startswith("#"):
+            continue
+        elif line.startswith("Summary: "):
             params["summary"] = line[9:]
         elif line.startswith("CC"):
             params["cc"] = line[4:].split(',')
@@ -150,7 +160,10 @@ def file_bug_from_data(bugdata):
     if params["whiteboard"]:
         params["severity"] = resolve_severity(params["whiteboard"])
     bug = gbugs.file_bug(params)
-    print("Filed https://bugs.gentoo.org/{}".format(bug.json()['id']))
+    try:
+        print("Filed https://bugs.gentoo.org/{}".format(bug.json()['id']))
+    except KeyError:
+        import pdb; pdb.set_trace()
 
 
 if __name__ == "__main__":
