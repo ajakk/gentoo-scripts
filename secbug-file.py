@@ -13,41 +13,41 @@ import gbugs
 
 
 def urldata(url):
-    return requests.get(url).content
-
-
-def decode_col(data, col):
-    """
-    Pandas encodes each column with the index in a format { col: {idx: data}},
-    this function returns a column value out of this pattern
-    """
-    return list(data[col].values())[0]
+    response = requests.get(url)
+    if response.status_code != 200:
+        print('{} status code for URL: {}'.format(response.status_code, url))
+        print(response.content)
+        sys.exit(1)
+    return response.content
 
 
 def get_ref_urls(data):
-    try:
-        refs = decode_col(data, 'cve.references.reference_data')
-        return [ref['url'] for ref in refs]
-    except KeyError:
-        return ""
+    refs = data['cve']['references']['reference_data']
+    return [ref['url'] for ref in refs]
 
 
 def generate_cve_description(cve_list):
     desc = []
-    for cve_data in [json.loads(data.decode()) for data in cve_list]:
-        cve = decode_col(cve_data, 'cve.CVE_data_meta.ID')
-        this_desc = decode_col(cve_data, 'value')
-        refs = get_ref_urls(cve_data)
+    for data in cve_list:
+        cve_id = data['cve']['CVE_data_meta']['ID']
+        # So this description_data chunk of the JSON is something like:
+        # {'description_data': [{'lang': 'en', 'value': 'FFmpeg 4.2 is affected by a Divide By Zero issue via libavcodec/aaccoder, which allows a remote malicious user to cause a Denial of Service'}]}
+        # We use a magic '0' to index this array, but is it ever bigger than one?
+        cve_desc = data['cve']['description']['description_data'][0]['value']
+        if len(data['cve']['description']['description_data']) > 1:
+            print(cve_id + "\'s description array is bigger than one, take a look!")
+            sys.exit(1)
+        cve_refs = get_ref_urls(data)
 
-        if len(refs) > 0:
-            desc.append("{} ({}):".format(cve, refs[0]))
-            if len(refs) > 1:
-                for ref in refs[1:]:
+        if len(cve_refs) > 0:
+            desc.append("{} ({}):".format(cve_id, cve_refs[0]))
+            if len(cve_refs) > 1:
+                for ref in cve_refs[1:]:
                     desc.append("# {}".format(ref))
         else:
-            desc.append("{}:".format(cve))
+            desc.append("{}:".format(cve_id))
         desc.append("")
-        desc.append(this_desc)
+        desc.append(cve_desc)
         desc.append("")
     return '\n'.join(desc)
 
@@ -83,15 +83,16 @@ def edit_data(package, cves, cve_list, cc):
     string.append("Alias: " + ','.join(cves))
     string.append("Whiteboard: ")
     string.append("URL: ")
-    string.append("Description: " + generate_cve_description(cve_data))
+    string.append("Description: " + generate_cve_description(cve_list))
 
     return write_edit_read(get_editor(), '\n'.join(string))
 
 
 def get_cve_data(cves):
     cve_data = []
+    base_url = 'https://services.nvd.nist.gov/rest/json/cve/1.0/'
     for cve in cves:
-        cve_data.append(urldata('http://127.0.0.1:8000/' + cve))
+        cve_data.append(json.loads(urldata(base_url + cve))['result']['CVE_Items'][0])
     return cve_data
 
 
@@ -163,6 +164,7 @@ def file_bug_from_data(bugdata):
     try:
         print("Filed https://bugs.gentoo.org/{}".format(bug.json()['id']))
     except KeyError:
+        print("Something went wrong filing the bug")
         import pdb; pdb.set_trace()
 
 
