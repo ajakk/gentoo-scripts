@@ -2,10 +2,10 @@
 
 from configparser import ConfigParser
 import os
-import requests
 import subprocess
 import sys
 
+import requests
 import pkgcore.config
 from pkgcore.ebuild import atom as atom_mod
 
@@ -14,10 +14,9 @@ BZ_API = "https://bugs.gentoo.org/rest/{endpoint}"
 
 def run_shell(string):
     command = string.split()
-    process = subprocess.Popen(command, stdout=subprocess.PIPE,
-                               stderr=subprocess.DEVNULL)
-    stdout, stderr = process.communicate()
-    return stdout
+    with subprocess.Popen(command, stdout=subprocess.PIPE,
+                          stderr=subprocess.DEVNULL) as process:
+        return process.communicate()[0]
 
 
 def get_package_list(old, new):
@@ -52,12 +51,12 @@ def find_stablereqs(session, cpv) -> list:
 
 
 def find_normal_use(repo, cp):
-    atom = atom_mod.atom(cp + '[python_targets_python3_8]')
+    atom = atom_mod.atom(cp + '[python_targets_python3_9]')
     return repo.match(atom)
 
 
 def find_single_use(repo, cp):
-    atom = atom_mod.atom(cp + '[python_single_target_python3_8]')
+    atom = atom_mod.atom(cp + '[python_single_target_eython3_9]')
     return repo.match(atom)
 
 
@@ -69,10 +68,13 @@ def find_python_compat(repo, cp):
         # Environment is straight from the environment file, a hacky solution
         # is catching if the python implementation is in that
         line = [line for line in pkg.environment.data.split('\n')
-                if "PYTHON_COMPAT=" in line][0]
+                if "PYTHON_COMPAT=" in line]
 
-        if "python3_8" in line:
-            matches.append(pkg)
+        # Sometimes version 1 of a package has no PYTHON_COMPAT line
+        # where b does, so check if we actually a PYTHON_COMPAT first
+        if len(line):
+            if "python3_9" in line[0]:
+                matches.append(pkg)
 
     return matches
 
@@ -87,7 +89,8 @@ def get_suitable_version(cpv):
     if len(matches) == 0:
         matches = find_python_compat(repo, cpv)
 
-    return matches
+    return [match for match in matches
+            if not match.live]
 
 
 def atom_maints(atom) -> list:
@@ -110,7 +113,7 @@ def set_blocker(session, blocker, bug_id, apikey):
     req = session.post(BZ_API.format(endpoint="bug"), params=params)
 
 
-def file_stablereq(session, url, blocker, apikey, cpv):
+def file_stablereq(session, blocker, apikey, cpv):
     params = {
         "Bugzilla_api_key": apikey,
 
@@ -119,7 +122,6 @@ def file_stablereq(session, url, blocker, apikey, cpv):
         "version": "unspecified",
         "description": "Please stabilize.",
         "blocks": blocker,
-        "url": url,
     }
 
     package = get_suitable_version(cpv)[0]
@@ -133,19 +135,23 @@ def file_stablereq(session, url, blocker, apikey, cpv):
     maintainers = atom_maints(package)
 
     params["summary"] = package_str + \
-        ": stabilization for python3_8"
+        ": stabilization for python3_9"
 
-    params["assigned_to"] = maintainers[0]
+    # Sometimes the maintainer list ends up being empty in the case of
+    # m-n packages
+    if maintainers:
+        params["assigned_to"] = maintainers[0]
+    else:
+        params["assigned_to"] = 'maintainer-needed@gentoo.org'
 
     if len(maintainers) > 1:
         params["cc"] = maintainers[1:]
 
-    import pdb
-    pdb.set_trace()
-
-    req = session.post(BZ_API.format(endpoint="bug"), params=params)
-
-    print(req.json()['id'])
+    print(params)
+    i = input("File bug? [yN] ")
+    if 'y' in i.lower():
+        req = session.post(BZ_API.format(endpoint="bug"), params=params)
+        print(req.json()['id'])
 
     #set_blocker(session, blocker, req.json()["id"], apikey)
     # TODO: set_blocker is broken and it should add package list and leading =
@@ -165,7 +171,7 @@ if __name__ == "__main__":
     config.read(bugzrc)
     apikey = config['default']['key']
 
-    packages = get_package_list("python3_7", "python3_8")
+    packages = get_package_list("python" + sys.argv[1], "python" + sys.argv[2])
 
     for cpv in packages:
         if "heimdal" in cpv:
@@ -180,9 +186,7 @@ if __name__ == "__main__":
         bugs = find_stablereqs(session, pn)
 
         if len(bugs) == 0:
-            file_stablereq(session,
-                           "https://qa-reports.gentoo.org/output/gpyutils/37-to-38-stablereq.txt",
-                           736709, apikey, pn)
+            file_stablereq(session, 788658, apikey, pn)
             print("Need to file for {cpv}".format(cpv=cpv))
         else:
             # TODO: an improvement would be checking that bugs here are
