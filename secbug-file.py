@@ -28,8 +28,7 @@ def atom_maints(atom) -> list:
 
     if len(mails) > 0:
         return mails
-    else:
-        return ["maintainer-needed@gentoo.org"]
+    return ["maintainer-needed@gentoo.org"]
 
 
 def cp_atom(atom_str):
@@ -73,7 +72,8 @@ def generate_cve_description(cve_list):
         cve_id = data['cve']['CVE_data_meta']['ID']
         # So this description_data chunk of the JSON is something like:
         # {'description_data': [{'lang': 'en', 'value': 'FFmpeg 4.2 is affected by a Divide By Zero issue via libavcodec/aaccoder, which allows a remote malicious user to cause a Denial of Service'}]}
-        # We use a magic '0' to index this array, but is it ever bigger than one?
+        # We use a magic '0' to index this array, but is it ever
+        # bigger than one?
         cve_desc = data['cve']['description']['description_data'][0]['value']
         if len(data['cve']['description']['description_data']) > 1:
             print(cve_id + "\'s description array is bigger than one, take a look!")
@@ -159,7 +159,7 @@ def resolve_severity(whiteboard):
         return "blocker"
     else:
         # TODO: error handling, probably should reopen editor for it
-        return "badvalue"
+        return "normal"
 
 
 def confirm():
