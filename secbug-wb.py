@@ -75,9 +75,7 @@ if __name__ == '__main__':
         not any(is_arch(email) for email in bug.cc)
 
     if done_stabling:
-        #import pdb; pdb.set_trace()
         update['keywords']['remove'] = ['CC-ARCHES', 'STABLEREQ']
-        update['cf_stabilisation_atoms'] = ''
         update['flags'][0]['name'] = 'sanity-check'
         update['flags'][0]['status'] = 'X'
         update['comment']['body'] = 'Please cleanup'
