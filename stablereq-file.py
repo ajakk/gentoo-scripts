@@ -36,7 +36,7 @@ def file_stablereq(session, cpv):
         "product": "Gentoo Linux",
         "component": "Stabilization",
         "version": "unspecified",
-        "description": "Please stabilize.",
+        "description": "Please stabilize, thanks!",
         "summary": cpv + ": stabilization",
         "cf_stabilisation_atoms": cpv + " *",
         "keywords": ["STABLEREQ"]
