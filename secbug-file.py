@@ -215,7 +215,7 @@ if __name__ == "__main__":
     parser.add_argument('-p', '--package', type=str, required=True)
     args = parser.parse_args()
 
-    cves = sorted(args.cves)
+    cves = sorted(list(set(args.cves)))
     cve_data = get_cve_data(cves)
 
     atom = cp_atom(args.package)[0]
