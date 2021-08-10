@@ -109,16 +109,24 @@ def get_editor():
         return 'nano'
 
 
+def minimize_cves(data):
+    years = {}
+    for cve in cves:
+        split = cve.split('-')
+        if split[1] not in years:
+            years[split[1]] = []
+        years[split[1]].append(split[2])
+    return ', '.join(['CVE-{}-{}'.format(year, '{' + ','.join(years[year]) + '}')
+                     for year in years])
+
+
 def edit_data(package, cves, cve_list, cc):
     string = []
 
     if len(cves) > 1:
-        # Would be nice to resolve e.g.
-        # CVE-2018-1111,CVE-2020-2222,CVE-2020-3333 to
-        # CVE-2018-1111,CVE-2020-{2222,3333}
-        string.append("Summary: " + package + ": multiple vulnerabilities (")
+        string.append("Summary: {}: multiple vulnerabilities ({})".format(package, minimize_cves(cve_list)))
     else:
-        string.append("Summary: " + package + ": " + "(" + cves[0] + ")")
+        string.append("Summary: {}: ({})".format(package, cves[0]))
 
     string.append("CC: " + ','.join(cc))
     string.append("Alias: " + ','.join(cves))
