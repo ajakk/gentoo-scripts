@@ -66,7 +66,7 @@ def get_ref_urls(data):
     return [ref['url'] for ref in refs]
 
 
-def generate_cve_description(cve_list):
+def generate_description(cve_list):
     desc = []
     for data in cve_list:
         cve_id = data['cve']['CVE_data_meta']['ID']
@@ -109,7 +109,7 @@ def get_editor():
         return 'nano'
 
 
-def minimize_cves(data):
+def minimize_cves(cves):
     years = {}
     for cve in cves:
         split = cve.split('-')
@@ -120,11 +120,11 @@ def minimize_cves(data):
                      for year in years])
 
 
-def edit_data(package, cves, cve_list, cc):
+def edit_data(package, cves, cc, cve_data=None):
     string = []
 
     if len(cves) > 1:
-        string.append("Summary: {}: multiple vulnerabilities ({})".format(package, minimize_cves(cve_list)))
+        string.append("Summary: {}: multiple vulnerabilities ({})".format(package, minimize_cves(cves)))
     else:
         string.append("Summary: {}: ({})".format(package, cves[0]))
 
@@ -132,7 +132,10 @@ def edit_data(package, cves, cve_list, cc):
     string.append("Alias: " + ','.join(cves))
     string.append("Whiteboard: ")
     string.append("URL: ")
-    string.append("Description: " + generate_cve_description(cve_list))
+    if cve_data:
+        string.append("Description: {}".format(generate_description(cve_data)))
+    else:
+        string.append("Description: ")
 
     return write_edit_read(get_editor(), '\n'.join(string))
 
@@ -221,15 +224,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--cves', type=str, required=True, nargs='+')
     parser.add_argument('-p', '--package', type=str, required=True)
+    parser.add_argument('-n', '--nofetch', action='store_true', default=False)
     args = parser.parse_args()
 
     cves = sorted(list(set(args.cves)))
-    cve_data = get_cve_data(cves)
-
     atom = cp_atom(args.package)[0]
     maints = atom_maints(atom)
 
-    data = edit_data(args.package, cves, cve_data, maints)
+    if args.nofetch:
+        data = edit_data(args.package, cves, maints)
+    else:
+        cve_data = get_cve_data(cves)
+        data = edit_data(args.package, cves, maints, cve_data=cve_data)
+
     if not confirm():
         print("Not filing")
         sys.exit(0)
