@@ -109,22 +109,11 @@ def get_editor():
         return 'nano'
 
 
-def minimize_cves(cves):
-    years = {}
-    for cve in cves:
-        split = cve.split('-')
-        if split[1] not in years:
-            years[split[1]] = []
-        years[split[1]].append(split[2])
-    return ', '.join(['CVE-{}-{}'.format(year, '{' + ','.join(years[year]) + '}')
-                     for year in years])
-
-
 def edit_data(package, cves, cc, cve_data=None):
     string = []
 
     if len(cves) > 1:
-        string.append("Summary: {}: multiple vulnerabilities ({})".format(package, minimize_cves(cves)))
+        string.append("Summary: {}: multiple vulnerabilities".format(package))
     else:
         string.append("Summary: {}: ({})".format(package, cves[0]))
 
@@ -210,8 +199,12 @@ def file_bug_from_data(bugdata):
             desc.append(line)
 
     params["description"] = '\n'.join(desc)
-    if params["whiteboard"]:
+    if "whiteboard" in params:
         params["severity"] = resolve_severity(params["whiteboard"])
+
+    if len(params["description"]) > 16384:
+        print("Can't file if description is longer than 16384 characters!")
+
     bug = file_bug(params)
     try:
         print("Filed https://bugs.gentoo.org/{}".format(bug.json()['id']))
