@@ -8,12 +8,22 @@ import os
 import subprocess
 import sys
 
+from bugzilla import Bugzilla
 from pkgcore.ebuild import atom as atom_mod
 import pkgcore.config
 import requests
 
 
+def get_api_key():
+    bugzrc = os.path.expanduser("~/.bugzrc")
+    config = ConfigParser()
+    config.read(bugzrc)
+    apikey = config['default']['key']
+    return apikey
+
+
 BZ_BUG_API = "https://bugs.gentoo.org/rest/bug"
+bgo = Bugzilla('https://bugs.gentoo.org', api_key=get_api_key(), force_rest=True)
 
 
 def atom_maints(atom) -> list:
@@ -37,14 +47,6 @@ def cp_atom(atom_str):
     return repo.match(atom)
 
 
-def get_api_key():
-    bugzrc = os.path.expanduser("~/.bugzrc")
-    config = ConfigParser()
-    config.read(bugzrc)
-    apikey = config['default']['key']
-    return apikey
-
-
 def file_bug(params):
     params["Bugzilla_api_key"] = get_api_key()
     params["version"] = "unspecified"
@@ -59,6 +61,11 @@ def urldata(url):
         print(response.content)
         sys.exit(1)
     return response.content
+
+
+def get_bug(bug):
+    response = requests.get(BZ_BUG_API + 'rest/bug/' + str(bug))
+
 
 
 def get_ref_urls(data):
@@ -109,18 +116,26 @@ def get_editor():
         return 'nano'
 
 
-def edit_data(package, cves, cc, cve_data=None):
+def edit_data(package, cves, cc, cve_data=None, bug_data=None):
     string = []
 
-    if len(cves) > 1:
+    if bug_data:
+        string.append("Summary: {}".format(bug_data.summary))
+    elif len(cves) > 1:
         string.append("Summary: {}: multiple vulnerabilities".format(package))
     else:
-        string.append("Summary: {}: ({})".format(package, cves[0]))
+        string.append("Summary: {}: ".format(package))
 
     string.append("CC: " + ','.join(cc))
     string.append("Alias: " + ','.join(cves))
-    string.append("Whiteboard: ")
-    string.append("URL: ")
+
+    if bug_data:
+        string.append("Whiteboard: " + bug_data.whiteboard)
+        string.append("URL: " + bug_data.url)
+    else:
+        string.append("Whiteboard: ")
+        string.append("URL: ")
+
     if cve_data:
         string.append("Description: {}".format(generate_description(cve_data)))
     else:
@@ -167,7 +182,7 @@ def confirm():
     return 'y' in i.lower()
 
 
-def file_bug_from_data(bugdata):
+def do_bug(bugdata, bug=None):
     params = {
         "product": "Gentoo Security",
         "component": "Vulnerabilities",
@@ -205,32 +220,62 @@ def file_bug_from_data(bugdata):
     if len(params["description"]) > 16384:
         print("Can't file if description is longer than 16384 characters!")
 
-    bug = file_bug(params)
-    try:
-        print("Filed https://bugs.gentoo.org/{}".format(bug.json()['id']))
-    except KeyError:
-        print("Something went wrong filing the bug")
-        import pdb; pdb.set_trace()
+    if bug:
+        # Hacky way to convert this from a bug creation to bug update
+        # with a comment
+        params['comment'] = {}
+        params['comment']['body'] = params['description']
+        del params['description']
+        aliases = params['alias']
+        params['alias'] = {}
+        params['alias']['set'] = aliases.split(',')
+        cc = params['cc']
+        params['cc'] = {}
+        params['cc']['add'] = cc
+        bug = bgo.update_bugs([bug], params)
+    else:
+        bug = file_bug(params)
+        try:
+            print("Filed https://bugs.gentoo.org/{}".format(bug.json()['id']))
+        except KeyError:
+            print("Something went wrong filing the bug")
+            import pdb; pdb.set_trace()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    op_types = parser.add_mutually_exclusive_group(required=True)
+    op_types.add_argument('-b', '--bug', type=int, required=False)
+    op_types.add_argument('-p', '--package', type=str, required=False)
     parser.add_argument('-c', '--cves', type=str, required=True, nargs='+')
-    parser.add_argument('-p', '--package', type=str, required=True)
     parser.add_argument('-n', '--nofetch', action='store_true', default=False)
     args = parser.parse_args()
 
-    cves = sorted(list(set(args.cves)))
-    atom = cp_atom(args.package)[0]
-    maints = atom_maints(atom)
+    bug_data = None
+    alias = []
+    if args.bug:
+        bug_data = bgo.getbug(args.bug)
+        cc = bug_data.cc
+        alias = bug_data.alias
+    else:
+        atoms = cp_atom(args.package)
+        if len(atoms) < 1:
+            print("Package {} doesn't seem to exist!".format(args.package))
+            sys.exit(1)
+
+        atom = atoms[0]
+        cc = atom_maints(atom)
+    alias = sorted(list(set(args.cves + alias)))
 
     if args.nofetch:
-        data = edit_data(args.package, cves, maints)
+        data = edit_data(args.package, alias, cc)
     else:
-        cve_data = get_cve_data(cves)
-        data = edit_data(args.package, cves, maints, cve_data=cve_data)
+        cve_data = get_cve_data(args.cves)
+        data = edit_data(args.package, alias, cc,
+                         cve_data=cve_data, bug_data=bug_data)
 
     if not confirm():
         print("Not filing")
         sys.exit(0)
-    file_bug_from_data(data)
+
+    do_bug(data, args.bug)
