@@ -67,7 +67,6 @@ def get_bug(bug):
     response = requests.get(BZ_BUG_API + 'rest/bug/' + str(bug))
 
 
-
 def get_ref_urls(data):
     refs = data['cve']['references']['reference_data']
     return [ref['url'] for ref in refs]
@@ -104,16 +103,18 @@ def write_edit_read(editor, string):
     path = "/tmp/secbug-file.txt"
     with open(path, "w") as f:
         f.write(string)
-    subprocess.run([editor, path])
+    args = editor
+    args.append(path)
+    subprocess.run(args)
     with open(path, "r") as f:
         return f.read()
 
 
 def get_editor():
     try:
-        return os.environ['EDITOR']
+        return os.environ['EDITOR'].split(' ')
     except KeyError:
-        return 'nano'
+        return ['nano']
 
 
 def edit_data(package, cves, cc, cve_data=None, bug_data=None):
@@ -149,6 +150,7 @@ def get_cve_data(cves):
     base_url = 'https://services.nvd.nist.gov/rest/json/cve/1.0/'
     for cve in cves:
         cve_data.append(json.loads(urldata(base_url + cve))['result']['CVE_Items'][0])
+
     return cve_data
 
 
@@ -247,7 +249,7 @@ if __name__ == "__main__":
     op_types = parser.add_mutually_exclusive_group(required=True)
     op_types.add_argument('-b', '--bug', type=int, required=False)
     op_types.add_argument('-p', '--package', type=str, required=False)
-    parser.add_argument('-c', '--cves', type=str, required=True, nargs='+')
+    parser.add_argument('-c', '--cves', type=str, required=False, nargs='+')
     parser.add_argument('-n', '--nofetch', action='store_true', default=False)
     args = parser.parse_args()
 
@@ -265,14 +267,18 @@ if __name__ == "__main__":
 
         atom = atoms[0]
         cc = atom_maints(atom)
-    alias = sorted(list(set(args.cves + alias)))
+
+    if args.cves:
+        alias = sorted(list(set(args.cves + alias)))
 
     if args.nofetch:
         data = edit_data(args.package, alias, cc)
     else:
-        cve_data = get_cve_data(args.cves)
-        data = edit_data(args.package, alias, cc,
-                         cve_data=cve_data, bug_data=bug_data)
+        if args.cves:
+            cve_data = get_cve_data(args.cves)
+            data = edit_data(args.package, alias, cc, cve_data=cve_data, bug_data=bug_data)
+        else:
+            data = edit_data(args.package, alias, cc, bug_data=bug_data)
 
     if not confirm():
         print("Not filing")
