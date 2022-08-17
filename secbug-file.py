@@ -68,20 +68,20 @@ def get_bug(bug):
 
 
 def get_ref_urls(data):
-    refs = data['cve']['references']['reference_data']
+    refs = data['references']['reference_data']
     return [ref['url'] for ref in refs]
 
 
 def generate_description(cve_list):
     desc = []
     for data in cve_list:
-        cve_id = data['cve']['CVE_data_meta']['ID']
+        cve_id = data['CVE_data_meta']['ID']
         # So this description_data chunk of the JSON is something like:
         # {'description_data': [{'lang': 'en', 'value': 'FFmpeg 4.2 is affected by a Divide By Zero issue via libavcodec/aaccoder, which allows a remote malicious user to cause a Denial of Service'}]}
         # We use a magic '0' to index this array, but is it ever
         # bigger than one?
-        cve_desc = data['cve']['description']['description_data'][0]['value']
-        if len(data['cve']['description']['description_data']) > 1:
+        cve_desc = data['description']['description_data'][0]['value']
+        if len(data['description']['description_data']) > 1:
             print(cve_id + "\'s description array is bigger than one, take a look!")
             sys.exit(1)
         cve_refs = get_ref_urls(data)
@@ -149,7 +149,18 @@ def get_cve_data(cves):
     cve_data = []
     base_url = 'https://services.nvd.nist.gov/rest/json/cve/1.0/'
     for cve in cves:
-        cve_data.append(json.loads(urldata(base_url + cve))['result']['CVE_Items'][0])
+        year = cve.split('-')[1]
+        num = cve.split('-')[2]
+
+        if len(num) == 4:
+            dirname = f"{num[0]}xxx"
+        else:
+            dirname = f"{num[:2]}xxx"
+
+        with open(os.path.expanduser(f"~/git/cvelist/{year}/{dirname}/{cve}.json")) as f:
+            data = json.loads(f.read())
+
+        cve_data.append(data)
 
     return cve_data
 
