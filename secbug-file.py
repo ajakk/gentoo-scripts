@@ -153,6 +153,8 @@ def get_cve_data(cves):
 
         if len(num) == 4:
             dirname = f"{num[0]}xxx"
+        elif len(num) == 7:
+            dirname = f"{num[:4]}xxx"
         else:
             dirname = f"{num[:2]}xxx"
 
