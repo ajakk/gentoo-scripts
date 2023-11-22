@@ -35,6 +35,7 @@ def grok_cves(soup):
     return [header.find('a')['href'][1:]
             for header in soup.find_all('h4', {'class': 'level-heading'})]
 
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print(f"Usage: {sys.argv[0]} offset")
@@ -60,12 +61,12 @@ if __name__ == "__main__":
     tracker_cves = set(ff_cves).intersection(set(tb_cves))
 
     if tracker_cves:
-        print('Tracker CVEs: ' + ', '.join(tracker_cves))
+        print('Tracker CVEs: ' + ' '.join(tracker_cves))
 
     if ff_ver:
-        print(', '.join(ff_ver))
-        print(', '.join(set(ff_cves).difference(tracker_cves)))
+        print(' '.join(ff_ver))
+        print(' '.join(sorted(set(ff_cves).difference(tracker_cves))))
 
     if tb_ver:
-        print(', '.join(tb_ver))
-        print(', '.join(set(tb_cves).difference(tracker_cves)))
+        print(' '.join(tb_ver))
+        print(' '.join(sorted(set(tb_cves).difference(tracker_cves))))
