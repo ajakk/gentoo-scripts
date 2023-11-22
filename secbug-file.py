@@ -158,7 +158,7 @@ def get_cve_data(cves):
         else:
             dirname = f"{num[:2]}xxx"
 
-        with open(os.path.expanduser(f"~/git/cvelist/{year}/{dirname}/{cve}.json")) as f:
+        with open(os.path.expanduser(f"~/gentoo/cvelist/{year}/{dirname}/{cve}.json")) as f:
             data = json.loads(f.read())
 
         cve_data.append(data)
