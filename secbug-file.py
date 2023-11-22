@@ -42,7 +42,7 @@ def atom_maints(atom) -> list:
 
 
 def cp_atom(atom_str):
-    repo = pkgcore.config.load_config().repo['gentoo']
+    repo = pkgcore.config.load_config().objects.repo['gentoo']
     atom = atom_mod.atom(atom_str)
     return repo.match(atom)
 
