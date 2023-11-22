@@ -83,7 +83,6 @@ def generate_description(cve_list):
         cve_desc = data['description']['description_data'][0]['value']
         if len(data['description']['description_data']) > 1:
             print(cve_id + "\'s description array is bigger than one, take a look!")
-            sys.exit(1)
         cve_refs = get_ref_urls(data)
 
         if len(cve_refs) > 0:
