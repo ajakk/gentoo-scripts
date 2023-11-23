@@ -1,11 +1,10 @@
 from configparser import ConfigParser
 import os
 
-import requests
-
 from bugzilla import Bugzilla
 import pkgcore.config
 from pkgcore.ebuild import atom as atom_mod
+import requests
 
 BZ_BUG_API = "https://bugs.gentoo.org/rest/bug"
 
