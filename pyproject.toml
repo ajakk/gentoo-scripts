@@ -6,9 +6,6 @@ dependencies = [
     "pkgcore",
 ]
 
-[tool.setuptools]
-packages = ["ajakscripts"]
-
 [project.scripts]
 bscve = "ajakscripts.bscve:main"
 secbug-file = "ajakscripts.secbugfile:main"
