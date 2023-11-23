@@ -256,7 +256,7 @@ def do_bug(bugdata, bug=None):
             import pdb; pdb.set_trace()
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     op_types = parser.add_mutually_exclusive_group(required=True)
     op_types.add_argument('-b', '--bug', type=int, required=False)
@@ -297,3 +297,7 @@ if __name__ == "__main__":
         sys.exit(0)
 
     do_bug(data, args.bug)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,17 @@
+[project]
+name = "ajak-scripts"
+version = "0.1"
+dependencies = [
+    "python-bugzilla",
+    "pkgcore",
+]
+
+[tool.setuptools]
+packages = ["ajakscripts"]
+
+[project.scripts]
+secbug-file = "ajakscripts.secbugfile:main"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
