@@ -3,9 +3,9 @@ import os
 
 import requests
 
+from bugzilla import Bugzilla
 import pkgcore.config
 from pkgcore.ebuild import atom as atom_mod
-
 
 BZ_BUG_API = "https://bugs.gentoo.org/rest/bug"
 
@@ -45,3 +45,6 @@ def file_bug(params):
     params["version"] = "unspecified"
 
     return requests.post(BZ_BUG_API, data=params)
+
+
+bgo = Bugzilla("https://bugs.gentoo.org", api_key=get_api_key())
