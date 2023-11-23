@@ -9,6 +9,7 @@ dependencies = [
 [project.scripts]
 bscve = "ajakscripts.bscve:main"
 secbug-file = "ajakscripts.secbugfile:main"
+glsa-all-done = "ajakscripts.glsaalldone:main"
 
 [build-system]
 requires = ["setuptools"]
