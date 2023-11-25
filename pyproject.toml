@@ -2,6 +2,7 @@
 name = "ajak-scripts"
 version = "0.1"
 dependencies = [
+    "beautifulsoup4",
     "python-bugzilla",
     "pkgcore",
 ]
@@ -10,6 +11,7 @@ dependencies = [
 bscve = "ajakscripts.bscve:main"
 secbug-file = "ajakscripts.secbugfile:main"
 glsa-all-done = "ajakscripts.glsaalldone:main"
+mozsec = "ajakscripts.mozsec:main"
 
 [build-system]
 requires = ["setuptools"]
